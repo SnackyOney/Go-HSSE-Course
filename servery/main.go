@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -86,10 +90,26 @@ func LaunchServer() {
 		Handler: mux,
 	}
 
-	fmt.Println("Starting server on http://localhost:8080")
-	err := server.ListenAndServe()
-	if err != nil {
-		fmt.Println("Error starting the server:", err)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		fmt.Println("Starting server on http://localhost:8080")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("Error starting the server: %v\n", err)
+		}
+	}()
+
+	<-stop
+	fmt.Println("\nReceived shutdown signal...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Printf("Error during server shutdown: %v\n", err)
+	} else {
+		fmt.Println("Server gracefully stopped")
 	}
 }
 
