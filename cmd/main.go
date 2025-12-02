@@ -17,6 +17,7 @@ func main() {
 	local_storage := stg_ex.Newstorage()
 	service := stg.NewBalanceService(local_storage)
 	balanceServer := server.NewBalanceServer(*service)
+	balanceServer.SetServer()
 	httpServer := &http.Server{
 		Addr:    ":8080",
 		Handler: balanceServer.Mux,
