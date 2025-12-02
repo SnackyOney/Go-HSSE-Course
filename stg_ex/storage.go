@@ -25,13 +25,18 @@ func Newstorage() stg.StorageInterface {
 func (storage *storage) Get(userid int) (int, error) {
 	storage.mux.RLock()
 	defer storage.mux.RUnlock()
-	print("userid")
+	if storage.database[userid] == nil {
+		storage.database[userid] = &UserInfo{userid, 0}
+	}
 	return storage.database[userid].budget, nil
 }
 
 func (storage *storage) Deposit(userid int, amount int) (int, error) {
 	storage.mux.Lock()
 	defer storage.mux.Unlock()
+	if storage.database[userid] == nil {
+		storage.database[userid] = &UserInfo{userid, 0}
+	}
 	storage.database[userid].budget += amount
 	return storage.database[userid].budget, nil
 }
@@ -40,10 +45,18 @@ func (storage *storage) Transfer(from, to int, amount int) (int, int, error) {
 	storage.mux.Lock()
 	defer storage.mux.Unlock()
 
+	if storage.database[from] == nil {
+		storage.database[from] = &UserInfo{from, 0}
+	}
+
+	if storage.database[to] == nil {
+		storage.database[to] = &UserInfo{to, 0}
+	}
+
 	if storage.database[from].budget < amount {
 		return 0, 0, exceptions.ErrInvalidAmount
 	}
-	if storage.database[from].id == from {
+	if storage.database[to].id == from {
 		return 0, 0, exceptions.ErrSelfTransfer
 	}
 
